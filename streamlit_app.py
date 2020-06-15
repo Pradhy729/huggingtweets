@@ -12,6 +12,9 @@ sys.path.append('/nfs/site/disks/gia_analytics_shared/paddy/projects/git_repos/s
 from simpletransformers.language_modeling import LanguageModelingModel
 from simpletransformers.language_generation import LanguageGenerationModel
 import logging
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt    
 import os
 import SessionState
 proxy = 'https://pradhyum:Paddy-_0)9(@proxy-chain.intel.com:911'
@@ -86,6 +89,10 @@ def collect_tweets(api, handle):
 
     curated_tweets = curate_tweets(alltweets)
     st.success(f'Total number of tweets: {len(alltweets)}\nCurated tweets: {len(curated_tweets)}')
+    all_months = pd.DataFrame({'tweet_month':[vars(status)['created_at'].strftime('%b-%Y') for status in alltweets]})
+    monthly = all_months.groupby('tweet_month').size().reset_index(name='counts')
+    monthly.to_pickle(f'./tweets_cache/{handle}_monthly.pkl')
+    
     return curated_tweets
 
 def process_tweets(curated_tweets):  
@@ -162,11 +169,13 @@ def build_language_model(handle):
 def generate_tweet(handle,prompt='I think that'):
     gen_args={'length':200,
              'k':10}
-    model = LanguageGenerationModel("gpt2", f"gpt2_outputs/{handle}",use_cuda=False, args=gen_args)
+    try:
+        model = LanguageGenerationModel("gpt2", f"gpt2_outputs/{handle}",use_cuda=False, args=gen_args)
+    except OSError:
+        build_language_model(handle)
+        model = LanguageGenerationModel("gpt2", f"gpt2_outputs/{handle}",use_cuda=False, args=gen_args)
     generated_text = model.generate(prompt,verbose=False)
     return generated_text
-    #st.write(f'Here\'s what @{handle} would have to say')
-    #st.text(generated_text[0])
     
 def huggingtweets(api, handle,session_state):
     st.write(f'Looking for user: @{handle}')
@@ -175,20 +184,17 @@ def huggingtweets(api, handle,session_state):
     st.success(f'Found User @{handle}. Collecting tweets.')
     #except:
     #st.error(f'Could not find user @{handle}. Please ensure the twitter handle you entered is accurate.')
-
-    if not os.path.exists(f'gpt2_outputs/{handle}'):
-        os.mkdir(f'gpt2_outputs/{handle}')
-        train_data_path = f'./tweets_cache/{handle}_train.txt'
-        valid_data_path = f'./tweets_cache/{handle}_valid.txt'
-
-        if not os.path.exists(train_data_path) and not os.path.exists(valid_data_path):
+    pkl_path = f'./tweets_cache/{handle}_monthly.pkl'
+    if not os.path.exists(f'gpt2_outputs/{handle}') or not os.path.exists(pkl_path):
+        #os.mkdir(f'gpt2_outputs/{handle}')
+        if not os.path.exists(pkl_path) or os.stat(pkl_path).st_size==0:
             curated_tweets = collect_tweets(api,handle)
             st.info('We download latest tweets associated to a user account through [Tweepy](http://docs.tweepy.org/).')
             cool_tweets = process_tweets(curated_tweets)
             prepare_dataset(cool_tweets,handle)
         else:
             st.success('Tweet data available from cache')
-
+        
         build_language_model(handle)
     else:
         st.success(f'Model already exists for user @{handle}. Using it to generate tweet.')
@@ -218,6 +224,16 @@ def main():
 #    handle = st.text_input('Type in the twitter handle of your choice')
     if session_state.button_handle_submit:
         huggingtweets(api,session_state.handle,session_state)
+    pkl_path = f'./tweets_cache/{session_state.handle}_monthly.pkl'
+    if os.path.isfile(pkl_path):
+        monthly = pd.read_pickle(f'./tweets_cache/{session_state.handle}_monthly.pkl')
+        activity_fig, ax = plt.subplots(figsize=(10,8))
+        ax = sns.barplot(x=monthly['tweet_month'],y=monthly['counts'])
+    else:
+        monthly = pd.read_pickle(f'./tweets_cache/realDonaldTrump_monthly.pkl')
+        activity_fig, ax = plt.subplots(figsize=(10,8))
+        ax = sns.barplot(x=monthly['tweet_month'],y=monthly['counts'])
+    st.pyplot(fig=activity_fig)
     #if st.button('Try another',key='restart'):
         #main()
        
