@@ -14,9 +14,22 @@ from simpletransformers.language_generation import LanguageGenerationModel
 import logging
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt    
+import matplotlib.pyplot as plt 
+import matplotlib.dates as mdates
+def format_x_date_month_day(ax):   
+    # Standard date x-axis formatting block, labels each month and ticks each day
+    days = mdates.DayLocator()
+    months = mdates.MonthLocator()  # every month
+    dayFmt = mdates.DateFormatter('%D')
+    monthFmt = mdates.DateFormatter('%Y-%m')
+    ax.figure.autofmt_xdate()
+    ax.xaxis.set_major_locator(months) 
+    ax.xaxis.set_major_formatter(monthFmt)
+    ax.xaxis.set_minor_locator(days)
 import os
 import SessionState
+from wordcloud import WordCloud
+from wordcloud import STOPWORDS        
 proxy = 'https://pradhyum:Paddy-_0)9(@proxy-chain.intel.com:911'
 os.environ['http_proxy'] = proxy 
 os.environ['HTTP_PROXY'] = proxy
@@ -198,12 +211,44 @@ def huggingtweets(api, handle,session_state):
         build_language_model(handle)
     else:
         st.success(f'Model already exists for user @{handle}. Using it to generate tweet.')
+    pkl_path = f'./tweets_cache/{session_state.handle}_monthly.pkl'
+    import matplotlib.ticker as ticker
+    if os.path.isfile(pkl_path):
+        monthly = pd.read_pickle(f'./tweets_cache/{session_state.handle}_monthly.pkl')
+        monthly['tweet_month'] = pd.to_datetime(monthly['tweet_month'],format='%b-%Y')
+        monthly.sort_values(by='tweet_month', inplace=True)
+        activity_fig, ax = plt.subplots(2,1,figsize=(15,20))
+        sns.barplot(x=monthly['tweet_month'],y=monthly['counts'], ax=ax[0],color='b')
+        ax[0].set_title(f'Tweet activity history for {session_state.handle} ', fontsize=40) 
+        
+        # Make most of the ticklabels empty so the labels don't get too crowded
+        ticklabels = ['']*len(monthly.index)
+        ticklabels[::3] = [item.strftime('%b-%Y') for item in monthly['tweet_month'][::3]]
+        ax[0].set_ylabel('Number of tweets',fontsize=20)
+        ax[0].set_xticklabels(ticklabels)
+        ax[0].set_xlabel('Month',fontsize=20)
+        f = open(f'./tweets_cache/{session_state.handle}_train.txt','r')
+        text = f.read()
+        common_words = ['rt'] + list(STOPWORDS)
+        ax[1].set_title(f'Tweet wordcloud for {session_state.handle} ', fontsize=40) 
+        wordcloud = WordCloud(stopwords=common_words,collocations=False).generate(text)
+        ax[1] = plt.imshow(wordcloud, interpolation='bilinear')
+    else:
+        monthly = pd.read_pickle(f'./tweets_cache/realDonaldTrump_monthly.pkl')
+        activity_fig, ax = plt.subplots(figsize=(16,8))
+        ax = sns.barplot(x=monthly['tweet_month'],y=monthly['counts'])
+        activity_fig.suptitle(f'Tweet activity history for realDonaldTrump', fontsize=16)
     
+    st.pyplot(fig=activity_fig)
     prompt = st.text_input(f'Give @{handle} a topic to tweet about')
+    option = st.selectbox('How would you like the prompt to be fed to the model?',
+                              (f'I want to talk about {prompt} today,', f'The thing about {prompt} is', f'{prompt}'))
     session_state.topic = st.button("Tweet")
+    
     if session_state.topic:
-        text = generate_tweet(handle,f'I want to talk about {prompt} today,')
-        st.markdown(text)
+        
+        text = generate_tweet(handle,option)
+        st.write(text[0])
         st.balloons()
     
 def main():
@@ -224,16 +269,7 @@ def main():
 #    handle = st.text_input('Type in the twitter handle of your choice')
     if session_state.button_handle_submit:
         huggingtweets(api,session_state.handle,session_state)
-    pkl_path = f'./tweets_cache/{session_state.handle}_monthly.pkl'
-    if os.path.isfile(pkl_path):
-        monthly = pd.read_pickle(f'./tweets_cache/{session_state.handle}_monthly.pkl')
-        activity_fig, ax = plt.subplots(figsize=(10,8))
-        ax = sns.barplot(x=monthly['tweet_month'],y=monthly['counts'])
-    else:
-        monthly = pd.read_pickle(f'./tweets_cache/realDonaldTrump_monthly.pkl')
-        activity_fig, ax = plt.subplots(figsize=(10,8))
-        ax = sns.barplot(x=monthly['tweet_month'],y=monthly['counts'])
-    st.pyplot(fig=activity_fig)
+    
     #if st.button('Try another',key='restart'):
         #main()
        
