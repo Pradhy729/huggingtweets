@@ -9,3 +9,4 @@ I modified Boris Dayma's original huggingtweets repo and played around with buil
 ## Acknowledgements
 
 Credit goes to [Boris Dayma](https://github.com/borisdayma) for the original repo that this was forked from. 
+I also made use of the [simpletransformers](https://github.com/ThilinaRajapakse/simpletransformers) library by [Thillina Rajapakse](https://github.com/ThilinaRajapakse/simpletransformers) to download, train and use the pretrained GPT2 model.
