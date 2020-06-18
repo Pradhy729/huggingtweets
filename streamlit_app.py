@@ -8,29 +8,21 @@ import random
 import re
 import urllib.request
 from PIL import Image
-sys.path.append('/nfs/site/disks/gia_analytics_shared/paddy/projects/git_repos/simpletransformers/')
+with open('credentials.json','r') as f:
+        credentials = json.load(f)
+sys.path.append(credentials.get('st_repo'))
 from simpletransformers.language_modeling import LanguageModelingModel
 from simpletransformers.language_generation import LanguageGenerationModel
 import logging
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt 
-import matplotlib.dates as mdates
-def format_x_date_month_day(ax):   
-    # Standard date x-axis formatting block, labels each month and ticks each day
-    days = mdates.DayLocator()
-    months = mdates.MonthLocator()  # every month
-    dayFmt = mdates.DateFormatter('%D')
-    monthFmt = mdates.DateFormatter('%Y-%m')
-    ax.figure.autofmt_xdate()
-    ax.xaxis.set_major_locator(months) 
-    ax.xaxis.set_major_formatter(monthFmt)
-    ax.xaxis.set_minor_locator(days)
 import os
 import SessionState
 from wordcloud import WordCloud
 from wordcloud import STOPWORDS        
-proxy = 'https://pradhyum:Paddy-_0)9(@proxy-chain.intel.com:911'
+proxy = credentials.get('proxy')
+
 os.environ['http_proxy'] = proxy 
 os.environ['HTTP_PROXY'] = proxy
 os.environ['https_proxy'] = proxy
