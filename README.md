@@ -4,6 +4,8 @@ I modified Boris Dayma's original huggingtweets repo and played around with buil
 
 ## Streamlit based Huggingtweets app demo
 
+![Streamlit app demo](streamlit_app_gif.gif)
+
 ## Acknowledgements
 
 Credit goes to [Boris Dayma](https://github.com/borisdayma) for the original repo that this was forked from. 
